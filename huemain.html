@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+  <title>Hue Control</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+    <script>
+        var IP = "192.168.0.9"
+        var ApiID =  "RhrWIsB4AJFW2byk7bAF3LbWq5JErAN-PDO30ams"
+    </script>
+
+    <style>
+    
+    body {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 18px;
+      line-height: 1.42857143;
+      color: #444444;
+      background-color: #ffffff;
+      font-weight: bold;
+      margin:20px;
+    }
+    
+    .slidecontainer {
+      width: 80%;
+    }
+    
+    .slider {
+      -webkit-appearance: none;
+      width: 40px;
+      height: 18px;
+      background: #d3d3d3;
+      outline: none;
+      opacity: 0.7;
+      -webkit-transition: .2s;
+      transition: opacity .2s;
+    }
+    
+    .slider:hover {
+      opacity: 1;
+    }
+    
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 18px;
+      background: #4CAF50;
+      cursor: pointer;
+    }
+    
+    .slider::-moz-range-thumb {
+      width: 20px;
+      height: 18px;
+      background: #4CAF50;
+      cursor: pointer;
+    }
+    
+    .cajita {
+       border-width: 1px;
+       border-style: solid;
+       padding: 10px;
+    }
+    
+    
+    .statusbar {
+      z-index: 99;
+      overflow: hidden;
+      background-color: #000;
+      color: #ffffff;
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+    }    
+    
+    </style>
+</head>
+
+
+<body>
+
+<h2>Lights</h2>
+<div id="orders" class="statusbar">...</div>
+
+<div id="content"></div>
+
+<script>
+
+
+document.getElementById("orders").innerHTML = "IP:" + IP + "   API ID:" + ApiID
+
+// funciones auxiliares
+function Bool2Integer(xbool) {
+var xinteger  = 0
+if (xbool==true) {xinteger=1} 
+return xinteger
+}
+
+function Effect2Integer(xString) {
+var xinteger  = 0
+if (xString=="colorloop") {xinteger=1} 
+return xinteger
+}
+
+// evento cambio en luces individuales
+function LightChange(id) {
+  var idNumber = id.substr(id.search("_")+1,10)
+  var idType = id.substr(0, id.search("_") )
+  var idValue = document.getElementById(id).value
+ 
+  var x = document.getElementById(idType+"_sp_"+idNumber); 
+  if(idType=="on") {
+    if(document.getElementById(id).value==1)  {idValue="true"} else {idValue="false"}
+  }
+
+  if(idType=="effect") {
+    if(document.getElementById(id).value==1)  {idValue='\"colorloop\"'} else {idValue='\"none\"'}
+  }
+  
+  x.innerHTML = idValue
+  
+  var UrlJson   = "http://" + IP + "/api/" + ApiID + "/lights/" + idNumber + "/state"
+  var StringJson = '{\"' + idType + '\":' + idValue + '}'
+  
+  var z=document.getElementById("orders");
+  z.innerHTML = UrlJson + " -> " + StringJson;
+  
+    // Update Json Data
+ 
+   var xhr = new XMLHttpRequest();
+    xhr.open("PUT", UrlJson, true);
+    xhr.setRequestHeader('Content-type','application/json; charset=utf-8');
+    xhr.onload = function () {
+    	var users = JSON.parse(xhr.responseText);
+    	if (xhr.readyState == 4 && xhr.status == "200") {
+    		z.innerHTML +=" -> OK"
+    	} else {
+    		z.innerHTML +=" -> ERROR"
+    	}
+    }
+    xhr.send(StringJson);  
+}
+
+// evento cambio en Grupos ....
+function GroupChange(id) {
+  var idNumber = id.substr(id.search("_")+1,10)
+  var idType = id.substr(0, id.search("_") )
+  var idValue = document.getElementById(id).value
+
+  var x = document.getElementById(idType+"_sp_"+idNumber); 
+
+  //le quito la 'g' del idtype
+  idType=idType.substr(1,10)
+
+  if(idType=="on") {
+    if(document.getElementById(id).value==1)  {idValue="true"} else {idValue="false"}
+  }
+  
+  x.innerHTML = idValue
+  
+  var UrlJson   = "http://" + IP + "/api/" + ApiID + "/groups/" + idNumber + "/action"
+  var StringJson = '{\"' + idType + '\":' + idValue + '}'
+  
+  var z=document.getElementById("orders");
+  z.innerHTML = UrlJson + " -> " + StringJson;
+  
+    // Update Json Data
+ 
+   var xhr = new XMLHttpRequest();
+    xhr.open("PUT", UrlJson, true);
+    xhr.setRequestHeader('Content-type','application/json; charset=utf-8');
+    xhr.onload = function () {
+    	var users = JSON.parse(xhr.responseText);
+    	if (xhr.readyState == 4 && xhr.status == "200") {
+    		z.innerHTML +=" -> OK"
+    	} else {
+    		z.innerHTML +=" -> ERROR"
+    	}
+    }
+    xhr.send(StringJson);  
+
+}
+
+
+
+// script principal de entrada
+var gethttp = new XMLHttpRequest();
+var MainObj;
+var LightsObj, GroupsObj,x,y, nLight;
+var urlAPI
+var idAPI
+
+// evento fin lectura json, rellenar html
+gethttp.onreadystatechange = function() {
+  if (this.readyState == 4 && this.status == 200) {
+    MainObj = JSON.parse(this.responseText);
+    LightsObj = MainObj.lights
+    GroupsObj = MainObj.groups
+    
+    var StringHTML = ""   
+    for (x in LightsObj) {
+      StringHTML += "<div class=\"col-6 col-sm-4 col-md-3 col_lg-2  cajita\">"
+      StringHTML += " id:"+ x + "<br>";
+      StringHTML += "name      :" + LightsObj[x].name ;      
+
+      StringHTML += "<br>on        :<span id=on_sp_" + x +">" + LightsObj[x].state.on + "</span>  ";
+      StringHTML += '<input type="range" id="on_' + x + '" class="slider" max=1 min=0 value="' + Bool2Integer(LightsObj[x].state.on) + '"onchange="LightChange(this.id)">'                                                                                           
+
+
+      if (typeof LightsObj[x].state.bri != "undefined") {
+          StringHTML += "<br>brillo    :<span id=bri_sp_" + x +">" + LightsObj[x].state.bri + "</span> ";
+          StringHTML += '<input type="range" id="bri_' + x + '" max=255 min=0 value="' + LightsObj[x].state.bri + '"onchange="LightChange(this.id)">'                                                                                           
+      } 
+      
+      if (typeof LightsObj[x].state.hue != "undefined") {     
+          StringHTML += "<br>color    :<span id=hue_sp_" + x +">" + LightsObj[x].state.hue + "</span> ";
+          StringHTML += '<input type="range" id="hue_' + x + '" max=65535 min=0 value="' + LightsObj[x].state.hue + '"onchange="LightChange(this.id)">'                                                                                           
+      }
+      
+      if (typeof LightsObj[x].state.sat != "undefined") {
+          StringHTML += "<br>saturacion    :<span id=sat_sp_" + x +">" + LightsObj[x].state.sat + "</span> ";      
+          StringHTML += '<input type="range" id="sat_' + x + '" max=255 min=0 value="' + LightsObj[x].state.sat + '"onchange="LightChange(this.id)">'                                                                                           
+      }
+      
+      if (typeof LightsObj[x].state.ct != "undefined") {
+          StringHTML += "<br>CT       :<span id=ct_sp_" + x +">" + LightsObj[x].state.ct + "</span> "; 
+          StringHTML += '<input type="range" id="ct_' + x + '" max=500 min=130 value="' + LightsObj[x].state.ct + '"onchange="LightChange(this.id)">'                                                                                           
+      } 
+        if (typeof LightsObj[x].state.effect != "undefined") {
+          StringHTML += "<br>Effect       :<span id=effect_sp_" + x +">" + LightsObj[x].state.effect + "</span> "; 
+          StringHTML += '<input type="range" id="effect_' + x + '" class="slider" max=1 min=0 value="' + Effect2Integer(LightsObj[x].state.effect) + '"onchange="LightChange(this.id)">'                                                                                           
+      } 
+          
+
+        
+      //for (y in LightsObj[x]) {
+      //  document.getElementById("content").innerHTML += "___" + y + ":"; 
+      //  document.getElementById("content").innerHTML +=  LightsObj[x][y] + "<br>";        
+      //}
+      StringHTML += "</div>"
+    }
+
+    StringHTML = "<div class=\"row\">" + StringHTML + "</div>"  
+    document.getElementById("content").innerHTML += StringHTML;     
+
+    document.getElementById("content").innerHTML +=  "<hr><br><h2>Groups</h2>";  
+    var StringHTML = "" 
+    for (x in GroupsObj) {
+      StringHTML += "<div class=\"col-6 col-sm-4 col-md-3 col_lg-2  cajita\">"
+      StringHTML += "id:"+ x + "<br>";
+      StringHTML += "name      :" + GroupsObj[x].name ; 
+           
+      StringHTML += "<br>on        :<span id=gon_sp_" + x +">" + GroupsObj[x].action.on  + "</span> ";
+      StringHTML += '<input type="range" id="gon_' + x + '" class="slider" max=1 min=0 value="' + Bool2Integer(GroupsObj[x].action.on) + '"onchange="GroupChange(this.id)">'   
+                                                                                                          
+      if (typeof GroupsObj[x].action.bri != "undefined") {
+            StringHTML += "<br>brillo    :<span id=gbri_sp_" + x +">"  + GroupsObj[x].action.bri  + "</span> ";
+            StringHTML += '<input type="range" id="gbri_' + x + '" max=255 min=0 value="' + GroupsObj[x].action.bri + '"onchange="GroupChange(this.id)">'      
+      } 
+      
+      if (typeof GroupsObj[x].action.hue != "undefined") {
+            StringHTML += "<br>color     :<span id=ghue_sp_" + x +">"  + GroupsObj[x].action.hue  + "</span> ";
+            StringHTML += '<input type="range" id="ghue_' + x + '" max=65535 min=0 value="' + GroupsObj[x].action.hue + '"onchange="GroupChange(this.id)">'      
+       } 
+       
+     if (typeof GroupsObj[x].action.sat != "undefined") {
+            StringHTML += "<br>saturacion:<span id=gsat_sp_" + x +">"  + GroupsObj[x].action.sat  + "</span> "; 
+            StringHTML += '<input type="range" id="gsat_' + x + '" max=255 min=0 value="' + GroupsObj[x].action.sat + '"onchange="GroupChange(this.id)">'      
+      } 
+      
+      if (typeof GroupsObj[x].action.ct != "undefined") {
+            StringHTML += "<br>CT        :<span id=gct_sp_" + x +">"  + GroupsObj[x].action.ct  + "</span> ";               
+            StringHTML += '<input type="range" id="gct_' + x + '" max=500 min=130 value="' + GroupsObj[x].action.ct + '"onchange="GroupChange(this.id)">'      
+      } 
+      
+      StringHTML += "<br>luces     :" + GroupsObj[x].lights + "<br>";
+      GroupLight= GroupsObj[x].lights       
+      //for (nLight in GroupLight) {
+      //   StringHTML += "luz:" + GroupLight[nLight] + ":";
+      //   StringHTML += "nombreluz:" + LightsObj[GroupLight[nLight]].name + " - "; 
+      //   StringHTML += "tipo:" + LightsObj[GroupLight[nLight]].productname + "<br>"; 
+      //}
+      StringHTML += "</div>"
+
+    }
+    StringHTML = "<div class=\"row\">" + StringHTML + "</div>" 
+    document.getElementById("content").innerHTML += StringHTML;  
+  }
+};
+
+//lectura json
+gethttp.open("GET", "http://" + IP + "/api/" + ApiID, true);
+gethttp.send();
+</script>
+
+</body>
+</html>
+
+
