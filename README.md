@@ -10,9 +10,9 @@ Local mode:
   
 Remote mode (not tested):
   
-  -Configure your router with a redirection from port:<someport> to port:8 IP: your Hue local IP
+  -Configure your router with a redirection from port:SOMEPORT to port:8O IP: your Hue local IP
  
-  -Open the .html file, and put your router external IP and Hue API Id in the vars (first script in the <head> section). 
+  -Open the .html file, and put RouterExternalIP:SOMEPORT and Hue API Id in the vars (first script in the <head> section). 
  
   -Upload the file to a website.
   
